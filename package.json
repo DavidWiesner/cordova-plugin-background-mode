@@ -13,7 +13,6 @@
     "ecosystem:cordova"
   ],
   "platforms": [
-    "ios",
     "android"
   ],
   "engines": [

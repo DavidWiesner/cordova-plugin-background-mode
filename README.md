@@ -20,7 +20,6 @@ Use the plugin by your own risk!
 ## Supported Platforms
 - __Android/Amazon FireOS__
 - __Browser__
-- __iOS__
 - __Windows__ _(see #222)_
 
 
