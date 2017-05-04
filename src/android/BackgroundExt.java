@@ -285,18 +285,19 @@ class BackgroundExt {
      * Add required flags to the window to unlock/wakeup the device.
      */
     static void addWindowFlags(Activity app) {
-        final Window window = app.getWindow();
-
-        app.runOnUiThread(new Runnable() {
-            public void run() {
-                window.addFlags(
-                        FLAG_ALLOW_LOCK_WHILE_SCREEN_ON |
-                        FLAG_SHOW_WHEN_LOCKED |
-                        FLAG_TURN_SCREEN_ON |
-                        FLAG_DISMISS_KEYGUARD
-                );
-            }
-        });
+        // FIXME remove all code not needed by the app
+//        final Window window = app.getWindow();
+//
+//        app.runOnUiThread(new Runnable() {
+//            public void run() {
+//                window.addFlags(
+//                        FLAG_ALLOW_LOCK_WHILE_SCREEN_ON |
+//                        FLAG_SHOW_WHEN_LOCKED |
+//                        FLAG_TURN_SCREEN_ON |
+//                        FLAG_DISMISS_KEYGUARD
+//                );
+//            }
+//        });
     }
 
     /**
