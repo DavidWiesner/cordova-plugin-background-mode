@@ -21,8 +21,10 @@
 
 package de.appplant.cordova.plugin.background;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -33,6 +35,7 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.support.annotation.RequiresApi;
 
 import org.json.JSONObject;
 
@@ -59,6 +62,9 @@ public class ForegroundService extends Service {
     // Default icon of the background notification
     private static final String NOTIFICATION_ICON = "icon";
 
+    private static final String CHANNEL_ID = "cordova.plugins.backgroundMode.channel";
+    public static final String CHANNEL_NAME = "Background notification";
+
     // Binder given to clients
     private final IBinder mBinder = new ForegroundBinder();
 
@@ -70,7 +76,7 @@ public class ForegroundService extends Service {
      * Allow clients to call on to the service.
      */
     @Override
-    public IBinder onBind (Intent intent) {
+    public IBinder onBind(Intent intent) {
         return mBinder;
     }
 
@@ -91,7 +97,7 @@ public class ForegroundService extends Service {
      * by the OS.
      */
     @Override
-    public void onCreate () {
+    public void onCreate() {
         super.onCreate();
         keepAwake();
     }
@@ -109,11 +115,12 @@ public class ForegroundService extends Service {
      * Put the service in a foreground state to prevent app from being killed
      * by the OS.
      */
+    @SuppressLint("InvalidWakeLockTag")
     private void keepAwake() {
         JSONObject settings = BackgroundMode.getSettings();
-        boolean isSilent    = settings.optBoolean("silent", false);
+        boolean isSilent = settings.optBoolean("silent", false);
 
-        if (!isSilent) {
+        if (!isSilent || Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForeground(NOTIFICATION_ID, makeNotification());
         }
 
@@ -165,20 +172,23 @@ public class ForegroundService extends Service {
      * @param isUpdate flag indication the settings should only update the notification
      */
     private Notification makeNotification(JSONObject settings, boolean isUpdate) {
-        String title    = settings.optString("title", NOTIFICATION_TITLE);
-        String text     = settings.optString("text", NOTIFICATION_TEXT);
+        String title = settings.optString("title", NOTIFICATION_TITLE);
+        String text = settings.optString("text", NOTIFICATION_TEXT);
         boolean bigText = settings.optBoolean("bigText", false);
         boolean onlyAlertOnce = settings.optBoolean("onlyAlertOnce", false);
 
         Context context = getApplicationContext();
-        String pkgName  = context.getPackageName();
-        Intent intent   = context.getPackageManager()
+        String pkgName = context.getPackageName();
+        Intent intent = context.getPackageManager()
                 .getLaunchIntentForPackage(pkgName);
 
-        if(!isUpdate || notificationBuilder == null){
+        if (!isUpdate || notificationBuilder == null) {
             notificationBuilder = new Notification.Builder(context)
                     .setOngoing(true)
                     .setOnlyAlertOnce(onlyAlertOnce);
+            if (Build.VERSION.SDK_INT >= 26) { // android oreo
+                notificationBuilder.setChannelId(createNotificationChannel());
+            }
         }
 
         notificationBuilder.setContentTitle(title)
@@ -209,12 +219,23 @@ public class ForegroundService extends Service {
         return notificationBuilder.build();
     }
 
+    @RequiresApi(26)
+    private String createNotificationChannel(){
+        NotificationChannel chan = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_NONE);
+        chan.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        NotificationManager service = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if(service != null){
+            service.createNotificationChannel(chan);
+        }
+        return CHANNEL_ID;
+    }
+
     /**
      * Update the notification.
      *
      * @param settings The config settings
      */
-    protected void updateNotification (JSONObject settings) {
+    protected void updateNotification(JSONObject settings) {
         boolean isSilent = settings.optBoolean("silent", false);
 
         if (isSilent) {
@@ -249,11 +270,10 @@ public class ForegroundService extends Service {
      *
      * @param icon The name of the icon.
      * @param type The resource type where to look for.
-     *
      * @return The resource id or 0 if not found.
      */
     private int getIconResId(String icon, String type) {
-        Resources res  = getResources();
+        Resources res = getResources();
         String pkgName = getPackageName();
 
         int resId = res.getIdentifier(icon, type, pkgName);
@@ -269,7 +289,7 @@ public class ForegroundService extends Service {
      * Set notification color if its supported by the SDK.
      *
      * @param notification A Notification.Builder instance
-     * @param settings A JSON dict containing the color definition (red: FF0000)
+     * @param settings     A JSON dict containing the color definition (red: FF0000)
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void setColor(Notification.Builder notification,
@@ -294,5 +314,4 @@ public class ForegroundService extends Service {
     private NotificationManager getNotificationManager() {
         return (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
     }
-
 }
