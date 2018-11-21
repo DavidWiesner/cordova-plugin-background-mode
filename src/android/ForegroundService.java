@@ -23,6 +23,7 @@ package de.appplant.cordova.plugin.background;
 
 import android.annotation.TargetApi;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -33,6 +34,7 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.support.annotation.RequiresApi;
 
 import org.json.JSONObject;
 
@@ -58,6 +60,10 @@ public class ForegroundService extends Service {
 
     // Default icon of the background notification
     private static final String NOTIFICATION_ICON = "icon";
+
+    private static final String CHANNEL_ID = "cordova.plugins.backgroundMode.channel";
+    private static final String CHANNEL_NAME = "Background notification";
+
 
     // Binder given to clients
     private final IBinder mBinder = new ForegroundBinder();
@@ -177,6 +183,10 @@ public class ForegroundService extends Service {
                     new Notification.BigTextStyle().bigText(text));
         }
 
+        if (Build.VERSION.SDK_INT >= 26) { // android oreo
+            notification.setChannelId(createNotificationChannel());
+        }
+
         setColor(notification, settings);
 
         if (intent != null && settings.optBoolean("resume")) {
@@ -189,6 +199,17 @@ public class ForegroundService extends Service {
         }
 
         return notification.build();
+    }
+
+    @RequiresApi(26)
+    private String createNotificationChannel(){
+        NotificationChannel chan = new NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_NONE);
+        chan.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        NotificationManager service = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if(service != null){
+            service.createNotificationChannel(chan);
+        }
+        return CHANNEL_ID;
     }
 
     /**
